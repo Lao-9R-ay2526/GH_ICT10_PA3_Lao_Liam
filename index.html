@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Working With Dictionaries</title>
+
+    <!-- Python -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2026.7.3/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2026.7.3/core.js"></script>
+
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+    <!-- ============ NEBULA OBSERVATORY (design only — body untouched) ============ -->
+    <style>
+        /* ---------- Fonts ---------- */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Outfit:wght@300;400;600;800&display=swap');
+
+        /* ---------- Keyframes ---------- */
+        /* Star drift: 320px = exact tile size → seamless, tiny GPU texture */
+        @keyframes starsDrift {
+            from { transform: translate3d(0, 0, 0); }
+            to   { transform: translate3d(320px, 320px, 0); }
+        }
+        /* Six nebulas breathing as one soft layer (single GPU transform) */
+        @keyframes nebulaBreathe {
+            0%   { transform: scale(1) rotate(0deg); }
+            100% { transform: scale(1.06) rotate(2.5deg); }
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .55; }
+        }
+        /* Two comets on crossing diagonals, staggered so they rarely meet */
+        @keyframes cometA {
+            0%   { transform: translate3d(-30vw, -12vh, 0) rotate(34deg) scaleX(0); opacity: 0; }
+            3%   { opacity: 1; }
+            8%   { transform: translate3d(-8vw, -1vh, 0) rotate(34deg) scaleX(1); }
+            24%  { transform: translate3d(88vw, 66vh, 0) rotate(34deg) scaleX(1); opacity: .9; }
+            26%, 100% { transform: translate3d(122vw, 104vh, 0) rotate(34deg) scaleX(1); opacity: 0; }
+        }
+        @keyframes cometB {
+            0%   { transform: translate3d(112vw, -6vh, 0) rotate(146deg) scaleX(0); opacity: 0; }
+            3%   { opacity: 1; }
+            8%   { transform: translate3d(84vw, 6vh, 0) rotate(146deg) scaleX(1); }
+            22%  { transform: translate3d(14vw, 50vh, 0) rotate(146deg) scaleX(1); opacity: .85; }
+            24%, 100% { transform: translate3d(-16vw, 72vh, 0) rotate(146deg) scaleX(1); opacity: 0; }
+        }
+        @keyframes saturnFloat {
+            0%, 100% { transform: rotate(-16deg) translateY(0); opacity: .85; }
+            50%      { transform: rotate(-13deg) translateY(-12px); opacity: 1; }
+        }
+        @keyframes coreSpin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to   { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        /* Moon orbits the card, counter-rotated to stay upright */
+        @keyframes orbitSpin {
+            from { transform: rotate(0turn) translateX(330px) rotate(0turn); }
+            to   { transform: rotate(1turn) translateX(330px) rotate(-1turn); }
+        }
+        @keyframes ufoFly {
+            0%   { transform: translate3d(-16vw, 10vh, 0) rotate(-5deg); opacity: 0; }
+            8%   { transform: translate3d(10vw, 19vh, 0) rotate(4deg); opacity: 1; }
+            20%  { transform: translate3d(36vw, 12vh, 0) rotate(-4deg); }
+            32%  { transform: translate3d(62vw, 21vh, 0) rotate(5deg); }
+            44%  { transform: translate3d(86vw, 13vh, 0) rotate(-4deg); }
+            54%  { transform: translate3d(110vw, 25vh, 0) rotate(-7deg); opacity: 1; }
+            56%, 100% { transform: translate3d(110vw, 25vh, 0) rotate(-7deg); opacity: 0; }
+        }
+        @keyframes textShimmer {
+            0%   { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        @keyframes btnSweep {
+            0%, 55%   { left: -80%; }
+            85%, 100% { left: 130%; }
+        }
+        /* opacity-only so nothing ever repaints */
+        @keyframes ledPulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .35; }
+        }
+        @keyframes bootIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---------- Base ---------- */
+        * { box-sizing: border-box; }
+
+        html { scrollbar-color: #8b5cf6 transparent; }
+
+        body {
+            margin: 0;
+            padding: 48px 20px 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Outfit', system-ui, sans-serif !important;
+            color: #eceaf7 !important;
+            overflow-x: hidden;
+            /* Static deep-space base (painted once, never animates) */
+            background:
+                radial-gradient(1200px 800px at 80% -15%, rgba( 88, 44, 220, .30), transparent 62%),
+                radial-gradient(1000px 750px at 10% 15%,  rgba( 20, 130, 230, .22), transparent 60%),
+                radial-gradient(1200px 900px at 55% 115%, rgba(225,  60, 190, .16), transparent 62%),
+                linear-gradient(115deg,
+                    transparent 28%,
+                    rgba(190, 200, 255, .04) 40%,
+                    rgba(150, 165, 255, .10) 50%,
+                    rgba(190, 200, 255, .04) 60%,
+                    transparent 72%),
+                linear-gradient(180deg, #0a0522 0%, #0d0833 50%, #060216 100%);
+        }
+
+        /* ------ Layer 1: drifting starfield (small GPU texture) ------ */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: -320px;      /* matches the 320px drift headroom */
+            pointer-events: none;
+            z-index: 1;
+            background-image:
+                radial-gradient(1.5px 1.5px at 30px 60px,  #ffffff, transparent),
+                radial-gradient(1px 1px at 130px 180px,    rgba(200, 220, 255, .85), transparent),
+                radial-gradient(2px 2px at 230px 90px,     #ffe9c9, transparent),
+                radial-gradient(1px 1px at 280px 260px,    rgba(255, 225, 250, .75), transparent),
+                radial-gradient(1.3px 1.3px at 80px 290px, rgba(170, 225, 255, .85), transparent),
+                radial-gradient(1px 1px at 200px 30px,     rgba(255, 255, 255, .6), transparent);
+            background-size: 320px 320px;
+            will-change: transform, opacity;
+            animation:
+                starsDrift 46s linear infinite,
+                twinkle 10s ease-in-out infinite;
+        }
+
+        /* ------ Layer 2: SIX gentle nebulas, breathing as one ------ */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: -10%;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(closest-side, rgba(139,  71, 255, .22), transparent)  8%  16% / 46vw 46vw no-repeat,
+                radial-gradient(closest-side, rgba( 34, 211, 238, .18), transparent) 86%  12% / 38vw 38vw no-repeat,
+                radial-gradient(closest-side, rgba(225,  81, 208, .18), transparent) 66%  88% / 52vw 52vw no-repeat,
+                radial-gradient(closest-side, rgba(255, 193, 110, .12), transparent) 20%  82% / 34vw 34vw no-repeat,
+                radial-gradient(closest-side, rgba( 79,  70, 229, .14), transparent) 46%  44% / 60vw 60vw no-repeat,
+                radial-gradient(closest-side, rgba( 45, 212, 191, .14), transparent) 94%  58% / 30vw 30vw no-repeat;
+            will-change: transform;
+            animation: nebulaBreathe 30s ease-in-out infinite alternate;
+        }
+
+        /* Real content floats above every layer */
+        body > h2, body > form, body > div, body > py-script {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ---------- Title ---------- */
+        h2 {
+            position: relative;
+            margin: 0 0 40px !important;
+            max-width: 880px;
+            text-align: center;
+            font-family: 'Orbitron', 'Outfit', sans-serif !important;
+            font-weight: 900 !important;
+            font-size: clamp(1.4rem, 4.2vw, 2.7rem) !important;
+            letter-spacing: 2px;
+            line-height: 1.3 !important;
+            text-transform: uppercase;
+            color: transparent !important;
+            background: linear-gradient(90deg,
+                #bcbcff, #a78bff, #7fe3ff, #ffd166, #ff9fd6, #bcbcff) left / 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: textShimmer 10s linear infinite;
+            filter: drop-shadow(0 2px 18px rgba(140, 90, 255, .45));
+        }
+
+        /* COMET #1 — launches from the title, blazes down-right */
+        h2::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 160px;
+            height: 3px;
+            border-radius: 99px;
+            background: linear-gradient(90deg,
+                transparent, rgba(170, 215, 255, .9), #ffffff);
+            box-shadow: 0 0 10px rgba(170, 215, 255, .8);
+            opacity: 0;
+            pointer-events: none;
+            will-change: transform, opacity;
+            animation: cometA 12s linear 2s infinite;
+        }
+
+        /* RINGED PLANET — sphere + double ring + halo + moon dot */
+        h2::after {
+            content: '';
+            position: absolute;
+            right: -90px;
+            top: -28px;
+            width: 66px;
+            height: 66px;
+            pointer-events: none;
+            background:
+                radial-gradient(circle 40px at 50% 50%, rgba(255, 190, 100, .30) 55%, transparent 75%),
+                radial-gradient(ellipse 46% 13% at 50% 51%,
+                    transparent 0 51%,
+                    rgba(255, 216, 150, .85) 52% 58%,
+                    rgba(255, 170,  90, .40) 59% 63%,
+                    transparent 64%),
+                radial-gradient(circle 33px at 35% 33%,
+                    #ffe9c9 0 8%, #ffbf6e 40%, #b96024 78%, #4c2510 96%, #2f1506 100%),
+                radial-gradient(circle 5px at 84% 20%,
+                    #eef3ff 0 60%, rgba(238, 243, 255, .25) 70%, transparent 80%);
+            will-change: transform, opacity;
+            animation: saturnFloat 8s ease-in-out infinite;
+        }
+
+        /* ---------- Console card ---------- */
+        form {
+            position: relative !important;
+            width: min(560px, 100%);
+            padding: 32px 28px 36px;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(165deg,
+                rgba(120, 80, 230, .16),
+                rgba(30, 20, 70, .55) 45%,
+                rgba(10, 5, 30, .78));
+            border: 1px solid rgba(180, 140, 255, .30) !important;
+            border-radius: 20px !important;
+            box-shadow:
+                0 20px 50px rgba(5, 0, 30, .55),
+                inset 0 1px 0 rgba(255, 255, 255, .12);
+            animation: bootIn .8s cubic-bezier(.2, .8, .25, 1) both;
+        }
+
+        /* Vortex ring behind the card (GPU rotation, static colors) */
+        form::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 680px;
+            height: 680px;
+            z-index: -1;
+            border-radius: 50%;
+            border: 1px dashed rgba(190, 150, 255, .25);
+            background:
+                radial-gradient(circle at center,
+                    transparent 0 30%,
+                    rgba(200, 160, 255, .35) 31% 32.5%,
+                    rgba(110, 150, 255, .15) 33% 36%,
+                    transparent 38%),
+                conic-gradient(from 0deg,
+                    transparent 0 14%,
+                    rgba(150, 90, 255, .30) 16%,
+                    transparent 20% 47%,
+                    rgba(0, 215, 255, .25) 50%,
+                    transparent 54% 80%,
+                    rgba(255, 120, 220, .25) 83%,
+                    transparent 86%);
+            pointer-events: none;
+            will-change: transform;
+            animation: coreSpin 26s linear infinite;
+        }
+
+        /* Orbiting moon around the card */
+        form::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 9px;
+            height: 9px;
+            margin: -4.5px 0 0 -4.5px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #eef3ff, #9db4ff);
+            box-shadow: 0 0 8px rgba(190, 215, 255, .9);
+            pointer-events: none;
+            will-change: transform;
+            animation: orbitSpin 22s linear infinite;
+        }
+
+        /* ---------- Input ---------- */
+        #dict {
+            width: 100% !important;
+            padding: 15px 20px !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 1.05rem !important;
+            letter-spacing: .3px;
+            color: #fff !important;
+            caret-color: #ffd166;
+            background: rgba(16, 10, 46, .78) !important;
+            border: 1px solid rgba(180, 140, 255, .32) !important;
+            border-radius: 12px !important;
+            outline: none;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, .45);
+            transition: border-color .3s ease, box-shadow .3s ease, transform .3s ease;
+        }
+
+        #dict::placeholder {
+            color: rgba(190, 200, 255, .55);
+            font-weight: 300;
+            letter-spacing: .5px;
+        }
+
+        #dict:focus {
+            border-color: #9d86ff !important;
+            box-shadow:
+                0 0 0 2px rgba(140, 100, 255, .45),
+                inset 0 2px 10px rgba(0, 0, 0, .45) !important;
+            transform: translateY(-2px);
+        }
+
+        #dict + br { display: none; }
+
+        /* ---------- Search button ---------- */
+        .btn-success {
+            position: relative !important;
+            width: 100% !important;
+            margin-top: 16px !important;
+            padding: 14px 26px !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 800 !important;
+            font-size: 1.02rem !important;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #1a0f3d !important;
+            background: linear-gradient(90deg, #8fb8ff, #b79aff, #8ae6d0, #ffb3e2, #8fb8ff) left / 220% 100% !important;
+            border: none !important;
+            border-radius: 12px !important;
+            cursor: pointer;
+            overflow: hidden;
+            animation: textShimmer 8s linear infinite;
+            box-shadow: 0 8px 24px rgba(90, 60, 200, .35);
+            transition: transform .25s ease;
+        }
+
+        .btn-success::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -80%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(105deg,
+                transparent, rgba(255, 255, 255, .55), transparent);
+            transform: skewX(-20deg);
+            animation: btnSweep 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .btn-success::after {
+            content: '';
+            position: absolute;
+            left: 16px;
+            bottom: 9px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ffd166;
+            animation: ledPulse 1.6s ease-in-out infinite;
+        }
+
+        .btn-success:hover  { transform: translateY(-3px) scale(1.02); }
+        .btn-success:active { transform: translateY(0)  scale(.97); }
+
+        /* ---------- Result ---------- */
+        #result {
+            width: min(760px, 100%);
+            margin-top: 36px;
+            padding: 6px;
+            color: #eceaf7 !important;
+            font-family: 'Outfit', sans-serif !important;
+        }
+
+        /* COMET #2 — long slow cycle, high-left crossing */
+        #result::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 140px;
+            height: 2px;
+            border-radius: 99px;
+            background: linear-gradient(90deg,
+                transparent, rgba(255, 200, 240, .9), #ffffff);
+            box-shadow: 0 0 8px rgba(255, 190, 250, .8);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+            will-change: transform, opacity;
+            animation: cometB 19s linear 7s infinite;
+        }
+
+        /* THE UFO — saucer, dome, nav lights, twin tractor beams */
+        #result::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 92px;
+            height: 150px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0;
+            background:
+                radial-gradient(ellipse 30% 12% at 50% 13%,
+                    rgba(190, 255, 255, .75) 0%, rgba(0, 200, 255, .4) 55%, transparent 80%),
+                radial-gradient(circle 3px at 38% 24%, #ffd166, transparent),
+                radial-gradient(circle 3px at 50% 25%, #7fe3ff, transparent),
+                radial-gradient(circle 3px at 62% 24%, #ff9fd6, transparent),
+                radial-gradient(ellipse 46% 10% at 50% 24%,
+                    #e6f3ff 0%, #8fb6db 40%, #24405f 72%, transparent 75%),
+                radial-gradient(ellipse 40% 4% at 50% 27%, rgba(0, 0, 0, .4), transparent),
+                linear-gradient(180deg,
+                    transparent 26%,
+                    rgba(150, 255, 240, .08) 34%,
+                    rgba(150, 255, 240, .04) 70%,
+                    transparent 80%) 50% 0 / 74% 100% no-repeat,
+                linear-gradient(180deg,
+                    transparent 25%,
+                    rgba(150, 255, 240, .17) 33%,
+                    rgba(150, 255, 240, .06) 66%,
+                    transparent 78%) 50% 0 / 40% 100% no-repeat;
+            will-change: transform, opacity;
+            animation: ufoFly 30s linear 5s infinite;
+        }
+
+        /* Result cards — solid gradients, no runtime blur */
+        #result > * {
+            position: relative;
+            background: linear-gradient(165deg,
+                rgba(120, 80, 230, .16),
+                rgba(20, 12, 52, .62));
+            border: 1px solid rgba(180, 140, 255, .26);
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 14px;
+            box-shadow:
+                0 12px 32px rgba(5, 0, 30, .45),
+                inset 0 1px 0 rgba(255, 255, 255, .09);
+            animation: bootIn .6s cubic-bezier(.2, .8, .25, 1) both;
+        }
+        #result > *:nth-child(2) { animation-delay: .07s; }
+        #result > *:nth-child(3) { animation-delay: .14s; }
+        #result > *:nth-child(4) { animation-delay: .21s; }
+        #result > *:nth-child(5) { animation-delay: .28s; }
+        #result > *:nth-child(6) { animation-delay: .35s; }
+
+        #result strong, #result h3, #result h4 {
+            color: #ffd166 !important;
+            text-shadow: 0 0 12px rgba(255, 209, 102, .45);
+        }
+
+        #result a { color: #9fe8ff !important; }
+        #result img, #result iframe {
+            max-width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgba(180, 140, 255, .3);
+        }
+
+        py-script { display: none; }
+
+        /* ---------- Polish ---------- */
+        ::selection { background: #8b5cf6; color: #fff; }
+
+        ::-webkit-scrollbar { width: 9px; }
+        ::-webkit-scrollbar-track { background: rgba(20, 10, 50, .4); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #a78bff, #22d3ee);
+            border-radius: 99px;
+        }
+
+        /* ---------- Reduced motion ---------- */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Bootstrap 5 Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+    <h2>Know the Creator of Your Favorite Game</h2>
+    <form>
+        <input type="text" id="dict" class="fw-bold form-control"  placeholder="Enter Your Favorite Game! "><br>
+        <input type="button" class="btn btn-success" py-click="game_details" value="Search">
+    </form>
+    <div id="result"> </div>
+
+    <py-script src="main.py"></py-script>
+</body>
+</html>
